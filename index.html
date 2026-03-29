@@ -52,36 +52,15 @@
     .fade-in-delay-3 { transition-delay: 0.3s; }
     .fade-in-delay-4 { transition-delay: 0.4s; }
 
-    /* Gold ambient orbs */
-    .gold-orb {
+    /* Silk WebGL canvas */
+    #silk-canvas-container {
       position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       z-index: 0;
-      filter: blur(90px);
-      will-change: transform;
-    }
-    @keyframes orb1 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      40%     { transform: translate(4vw,-6vh) scale(1.12); }
-      70%     { transform: translate(-3vw,4vh) scale(0.92); }
-    }
-    @keyframes orb2 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      30%     { transform: translate(-5vw,5vh) scale(1.08); }
-      65%     { transform: translate(4vw,-3vh) scale(0.95); }
-    }
-    @keyframes orb3 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      50%     { transform: translate(3vw,6vh) scale(1.1); }
-    }
-    @keyframes orb4 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      45%     { transform: translate(-4vw,-5vh) scale(1.06); }
-    }
-    @keyframes orb5 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      55%     { transform: translate(5vw,3vh) scale(0.9); }
+      pointer-events: none;
+      overflow: hidden;
     }
 
     /* Nav */
@@ -348,32 +327,145 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // ─── Gold Ambient Orbs Background ───────────────────────────────────────
-    function GoldOrbs() {
-      const orbs = [
-        { w: '65vw', h: '65vw', top: '-15vh', right: '-15vw',  anim: 'orb1 100s ease-in-out infinite',        opacity: 0.055 },
-        { w: '50vw', h: '50vw', bottom: '-10vh', left: '-12vw', anim: 'orb2 120s ease-in-out infinite',       opacity: 0.045 },
-        { w: '40vw', h: '40vw', top: '30vh',  left: '20vw',     anim: 'orb3 85s ease-in-out infinite 10s',   opacity: 0.035 },
-        { w: '35vw', h: '35vw', top: '55vh',  right: '10vw',    anim: 'orb4 110s ease-in-out infinite 5s',   opacity: 0.04  },
-        { w: '28vw', h: '28vw', top: '15vh',  left: '50vw',     anim: 'orb5 75s ease-in-out infinite 20s',   opacity: 0.03  },
-      ];
-      return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-          {orbs.map((o, i) => (
-            <div
-              key={i}
-              className="gold-orb"
-              style={{
-                width: o.w, height: o.h,
-                top: o.top, bottom: o.bottom,
-                left: o.left, right: o.right,
-                background: `radial-gradient(circle, rgba(201,168,76,${o.opacity}) 0%, rgba(201,168,76,${(o.opacity*0.3).toFixed(3)}) 40%, transparent 70%)`,
-                animation: o.anim,
-              }}
-            />
-          ))}
-        </div>
-      );
+    // ─── Silk WebGL Background (ported from reactbits.dev/backgrounds/silk) ──
+
+    const SILK_VERT = `
+attribute vec2 position;
+varying vec2 vUv;
+void main() {
+  vUv = position * 0.5 + 0.5;
+  gl_Position = vec4(position, 0.0, 1.0);
+}`;
+
+    const SILK_FRAG = `
+precision mediump float;
+varying vec2 vUv;
+uniform float uTime;
+uniform vec3  uColor;
+uniform float uSpeed;
+uniform float uScale;
+uniform float uRotation;
+uniform float uNoiseIntensity;
+
+const float e = 2.71828182845904523536;
+
+float noise(vec2 tc) {
+  float G = e;
+  vec2 r = G * sin(G * tc);
+  return fract(r.x * r.y * (1.0 + tc.x));
+}
+
+vec2 rotateUv(vec2 uv, float angle) {
+  float c = cos(angle);
+  float s = sin(angle);
+  return mat2(c, -s, s, c) * uv;
+}
+
+void main() {
+  float rnd     = noise(gl_FragCoord.xy);
+  vec2  uv      = rotateUv(vUv * uScale, uRotation);
+  vec2  tex     = uv * uScale;
+  float tOffset = uSpeed * uTime;
+
+  tex.y += 0.03 * sin(8.0 * tex.x - tOffset);
+
+  float pattern = 0.6 + 0.4 * sin(
+    5.0 * (tex.x + tex.y +
+           cos(3.0 * tex.x + 5.0 * tex.y) +
+           0.02 * tOffset) +
+    sin(20.0 * (tex.x + tex.y - 0.1 * tOffset))
+  );
+
+  float alpha = pattern * 0.22 + 0.04;
+  vec3  col   = uColor * (pattern - rnd / 15.0 * uNoiseIntensity);
+  gl_FragColor = vec4(col, alpha);
+}`;
+
+    function initSilkWebGL(container) {
+      const canvas = document.createElement('canvas');
+      canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;';
+
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (!gl) return null;
+
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      function compile(type, src) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      }
+      const prog = gl.createProgram();
+      gl.attachShader(prog, compile(gl.VERTEX_SHADER,   SILK_VERT));
+      gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, SILK_FRAG));
+      gl.linkProgram(prog);
+      gl.useProgram(prog);
+
+      // Full-screen triangle
+      const pos = new Float32Array([-1,-1, 3,-1, -1,3]);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, pos, gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'position');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+      const u = {
+        time:    gl.getUniformLocation(prog, 'uTime'),
+        color:   gl.getUniformLocation(prog, 'uColor'),
+        speed:   gl.getUniformLocation(prog, 'uSpeed'),
+        scale:   gl.getUniformLocation(prog, 'uScale'),
+        rot:     gl.getUniformLocation(prog, 'uRotation'),
+        noise:   gl.getUniformLocation(prog, 'uNoiseIntensity'),
+      };
+
+      // Luxury tuning: slow, warm gold, slight rotation for movement
+      gl.uniform3fv(u.color,  [201/255, 168/255, 76/255]);
+      gl.uniform1f(u.speed,   1.8);
+      gl.uniform1f(u.scale,   1.2);
+      gl.uniform1f(u.rot,     0.45);
+      gl.uniform1f(u.noise,   1.4);
+
+      function resize() {
+        const w = container.offsetWidth  || window.innerWidth;
+        const h = container.offsetHeight || window.innerHeight;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width  = w * dpr;
+        canvas.height = h * dpr;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+      const ro = new ResizeObserver(resize);
+      ro.observe(container);
+      resize();
+
+      let rafId = null;
+      const t0 = performance.now();
+      function animate() {
+        gl.uniform1f(u.time, (performance.now() - t0) * 0.001);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        rafId = requestAnimationFrame(animate);
+      }
+      rafId = requestAnimationFrame(animate);
+      container.appendChild(canvas);
+
+      return function cleanup() {
+        ro.disconnect();
+        if (rafId !== null) cancelAnimationFrame(rafId);
+      };
+    }
+
+    function SilkBackground() {
+      const divRef = useRef(null);
+      useEffect(() => {
+        const el = divRef.current;
+        if (!el) return;
+        const cleanup = initSilkWebGL(el);
+        return () => { if (cleanup) cleanup(); };
+      }, []);
+      return <div ref={divRef} id="silk-canvas-container" />;
     }
 
 
@@ -430,7 +522,7 @@
           {/* Dark overlay over canvas */}
           <div
             className="absolute inset-0"
-            style={{ background: 'rgba(10,10,10,0.72)', zIndex: 1 }}
+            style={{ background: 'rgba(10,10,10,0.58)', zIndex: 1 }}
           />
           {/* Vignette */}
           <div className="hero-vignette absolute inset-0" style={{ zIndex: 2 }} />
@@ -1019,7 +1111,7 @@
 
       return (
         <>
-          <GoldOrbs />
+          <SilkBackground />
           <Nav />
           <main>
             <Hero />
