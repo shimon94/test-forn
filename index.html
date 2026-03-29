@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ארט-ווד | ריהוט יוקרה ישראלי</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background-color: #0a0a0a;
+      color: #f0ece4;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Noise texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+      background-size: 200px 200px;
+    }
+
+    /* Scroll animations */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fade-in-delay-1 { transition-delay: 0.1s; }
+    .fade-in-delay-2 { transition-delay: 0.2s; }
+    .fade-in-delay-3 { transition-delay: 0.3s; }
+    .fade-in-delay-4 { transition-delay: 0.4s; }
+
+    /* Gold ambient orbs */
+    .gold-orb {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(90px);
+      will-change: transform;
+    }
+    @keyframes orb1 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      40%     { transform: translate(4vw,-6vh) scale(1.12); }
+      70%     { transform: translate(-3vw,4vh) scale(0.92); }
+    }
+    @keyframes orb2 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      30%     { transform: translate(-5vw,5vh) scale(1.08); }
+      65%     { transform: translate(4vw,-3vh) scale(0.95); }
+    }
+    @keyframes orb3 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      50%     { transform: translate(3vw,6vh) scale(1.1); }
+    }
+    @keyframes orb4 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      45%     { transform: translate(-4vw,-5vh) scale(1.06); }
+    }
+    @keyframes orb5 {
+      0%,100% { transform: translate(0,0) scale(1); }
+      55%     { transform: translate(5vw,3vh) scale(0.9); }
+    }
+
+    /* Nav */
+    .nav-blur {
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(10, 10, 10, 0.85);
+      border-bottom: 1px solid rgba(201, 168, 76, 0.15);
+    }
+
+    /* Product card hover */
+    .product-card {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .product-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.5s ease;
+    }
+    .product-card:hover img {
+      transform: scale(1.05);
+    }
+    .product-card .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 10, 0);
+      display: flex;
+      align-items: flex-end;
+      padding: 1.25rem;
+      transition: background 0.4s ease, box-shadow 0.4s ease;
+      box-shadow: inset 0 0 0 0px #c9a84c;
+    }
+    .product-card:hover .overlay {
+      background: rgba(10, 10, 10, 0.65);
+      box-shadow: inset 0 0 0 2px #c9a84c;
+    }
+    .product-card .product-name {
+      color: #c9a84c;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .product-card:hover .product-name {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Gallery grid */
+    .gallery-masonry {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-auto-rows: 280px;
+      gap: 10px;
+    }
+    @media (min-width: 640px) {
+      .gallery-masonry {
+        grid-template-columns: repeat(2, 1fr);
+        grid-auto-rows: 280px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .gallery-masonry {
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: 260px;
+      }
+      /* Make certain cards taller for asymmetric look */
+      .gallery-masonry .product-card:nth-child(1) { grid-row: span 2; }
+      .gallery-masonry .product-card:nth-child(5) { grid-row: span 2; }
+      .gallery-masonry .product-card:nth-child(9) { grid-row: span 2; }
+    }
+    .gallery-masonry .product-card {
+      display: block;
+      overflow: hidden;
+      height: 100%;
+    }
+    .gallery-masonry .product-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      transition: transform 0.6s ease;
+    }
+    .gallery-masonry .product-card:hover img {
+      transform: scale(1.07);
+    }
+
+    /* Gold rule */
+    .gold-rule {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #c9a84c, transparent);
+      margin: 1.5rem 0;
+    }
+
+    /* Timeline */
+    .timeline-connector {
+      flex: 1;
+      height: 2px;
+      background: repeating-linear-gradient(
+        to left,
+        #c9a84c 0px,
+        #c9a84c 8px,
+        transparent 8px,
+        transparent 16px
+      );
+      margin-top: -1rem;
+    }
+    @media (max-width: 767px) {
+      .timeline-connector {
+        width: 2px;
+        height: 3rem;
+        margin-top: 0;
+        margin-right: auto;
+        margin-left: auto;
+        background: repeating-linear-gradient(
+          to bottom,
+          #c9a84c 0px,
+          #c9a84c 8px,
+          transparent 8px,
+          transparent 16px
+        );
+        flex: none;
+      }
+    }
+
+    /* CTA section */
+    .cta-section {
+      background: linear-gradient(135deg, #0d0d0d 0%, #111111 50%, #0a0a0a 100%);
+    }
+
+    /* Form inputs */
+    .form-input {
+      width: 100%;
+      background: rgba(240, 236, 228, 0.05);
+      border: 1px solid rgba(201, 168, 76, 0.25);
+      color: #f0ece4;
+      padding: 0.875rem 1rem;
+      font-family: 'Heebo', sans-serif;
+      font-size: 0.95rem;
+      transition: border-color 0.3s ease, background 0.3s ease;
+      outline: none;
+    }
+    .form-input:focus {
+      border-color: #c9a84c;
+      background: rgba(201, 168, 76, 0.08);
+    }
+    .form-input::placeholder {
+      color: rgba(240, 236, 228, 0.35);
+    }
+
+    /* Smooth scroll */
+    html { scroll-behavior: smooth; }
+
+    /* Story section image */
+    .story-image-container {
+      position: relative;
+      min-height: 400px;
+    }
+    .story-image-container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(10,10,10,0.4) 0%, rgba(10,10,10,0.1) 100%);
+      z-index: 1;
+    }
+    .story-image-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      position: absolute;
+      inset: 0;
+    }
+
+    /* Hero text shadow */
+    .hero-title-shadow {
+      text-shadow: 0 0 60px rgba(201, 168, 76, 0.3), 0 2px 8px rgba(0,0,0,0.8);
+    }
+
+    /* WhatsApp button */
+    .whatsapp-btn {
+      background: #25D366;
+      color: white;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .whatsapp-btn:hover {
+      background: #1da851;
+      transform: translateY(-2px);
+    }
+
+    /* Gold CTA button */
+    .gold-btn {
+      background: #c9a84c;
+      color: #0a0a0a;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    .gold-btn:hover {
+      background: #e8d5a3;
+      transform: translateY(-2px);
+    }
+
+    /* Hero CTA border button */
+    .hero-cta {
+      border: 1.5px solid #c9a84c;
+      color: #c9a84c;
+      background: transparent;
+      font-family: 'Heebo', sans-serif;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+    .hero-cta:hover {
+      background: #c9a84c;
+      color: #0a0a0a;
+    }
+
+    /* Nav links */
+    .nav-link {
+      color: rgba(240, 236, 228, 0.75);
+      transition: color 0.2s ease;
+      font-size: 0.9rem;
+      font-weight: 400;
+      cursor: pointer;
+    }
+    .nav-link:hover {
+      color: #c9a84c;
+    }
+
+    /* Section spacing */
+    section { position: relative; z-index: 1; }
+
+    /* Vignette on hero */
+    .hero-vignette {
+      background: radial-gradient(ellipse at center, rgba(10,10,10,0) 40%, rgba(10,10,10,0.8) 100%);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'luxury-black': '#0a0a0a',
+            'luxury-gold': '#c9a84c',
+            'luxury-champagne': '#e8d5a3',
+            'luxury-off-white': '#f0ece4',
+          },
+          fontFamily: {
+            heebo: ['Heebo', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ─── Gold Ambient Orbs Background ───────────────────────────────────────
+    function GoldOrbs() {
+      const orbs = [
+        { w: '65vw', h: '65vw', top: '-15vh', right: '-15vw',  anim: 'orb1 100s ease-in-out infinite',        opacity: 0.055 },
+        { w: '50vw', h: '50vw', bottom: '-10vh', left: '-12vw', anim: 'orb2 120s ease-in-out infinite',       opacity: 0.045 },
+        { w: '40vw', h: '40vw', top: '30vh',  left: '20vw',     anim: 'orb3 85s ease-in-out infinite 10s',   opacity: 0.035 },
+        { w: '35vw', h: '35vw', top: '55vh',  right: '10vw',    anim: 'orb4 110s ease-in-out infinite 5s',   opacity: 0.04  },
+        { w: '28vw', h: '28vw', top: '15vh',  left: '50vw',     anim: 'orb5 75s ease-in-out infinite 20s',   opacity: 0.03  },
+      ];
+      return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          {orbs.map((o, i) => (
+            <div
+              key={i}
+              className="gold-orb"
+              style={{
+                width: o.w, height: o.h,
+                top: o.top, bottom: o.bottom,
+                left: o.left, right: o.right,
+                background: `radial-gradient(circle, rgba(201,168,76,${o.opacity}) 0%, rgba(201,168,76,${(o.opacity*0.3).toFixed(3)}) 40%, transparent 70%)`,
+                animation: o.anim,
+              }}
+            />
+          ))}
+        </div>
+      );
+    }
+
+
+    // ─── Navigation ─────────────────────────────────────────────────────────
+    function Nav() {
+      const scrollTo = (id) => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+      };
+      return (
+        <nav
+          className="nav-blur fixed top-0 right-0 left-0 z-50 flex items-center justify-between px-6 md:px-12 py-4"
+          style={{ direction: 'rtl' }}
+        >
+          <div
+            className="text-2xl font-black tracking-widest cursor-pointer"
+            style={{ color: '#c9a84c', fontFamily: 'Heebo, sans-serif', letterSpacing: '0.15em' }}
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            ארט-ווד
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            {[
+              { label: 'קולקציה', id: 'gallery' },
+              { label: 'הסיפור שלנו', id: 'story' },
+              { label: 'תהליך', id: 'process' },
+              { label: 'צור קשר', id: 'contact' },
+            ].map(({ label, id }) => (
+              <span key={id} className="nav-link" onClick={() => scrollTo(id)}>
+                {label}
+              </span>
+            ))}
+          </div>
+          <button
+            className="md:hidden flex flex-col gap-1.5 p-1"
+            onClick={() => scrollTo('contact')}
+            aria-label="תפריט"
+          >
+            {[0,1,2].map(i => (
+              <span key={i} className="block w-6 h-0.5" style={{ background: '#c9a84c' }} />
+            ))}
+          </button>
+        </nav>
+      );
+    }
+
+    // ─── Hero Section ────────────────────────────────────────────────────────
+    function Hero() {
+      return (
+        <section
+          id="hero"
+          className="relative flex items-center justify-center min-h-screen"
+          style={{ zIndex: 1 }}
+        >
+          {/* Dark overlay over canvas */}
+          <div
+            className="absolute inset-0"
+            style={{ background: 'rgba(10,10,10,0.72)', zIndex: 1 }}
+          />
+          {/* Vignette */}
+          <div className="hero-vignette absolute inset-0" style={{ zIndex: 2 }} />
+
+          {/* Hero content */}
+          <div
+            className="relative text-center px-6 fade-in visible"
+            style={{ zIndex: 3, maxWidth: '800px', width: '100%' }}
+          >
+            {/* Decorative line above */}
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <span style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to left, #c9a84c, transparent)' }} />
+              <span style={{ color: '#c9a84c', fontSize: '0.7rem', letterSpacing: '0.25em', fontWeight: 300 }}>
+                ישראל · 2024
+              </span>
+              <span style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to right, #c9a84c, transparent)' }} />
+            </div>
+
+            <h1
+              className="hero-title-shadow font-black leading-none mb-4"
+              style={{
+                fontSize: 'clamp(3.5rem, 12vw, 7rem)',
+                letterSpacing: '0.12em',
+                color: '#f0ece4',
+                fontFamily: 'Heebo, sans-serif',
+              }}
+            >
+              ארט-ווד
+            </h1>
+            <p
+              className="font-light mb-3"
+              style={{
+                fontSize: 'clamp(1.1rem, 3vw, 1.6rem)',
+                color: '#c9a84c',
+                letterSpacing: '0.08em',
+                fontFamily: 'Heebo, sans-serif',
+              }}
+            >
+              ריהוט יוקרה. עיצוב על פי הזמנה.
+            </p>
+            <p
+              className="font-light mb-10"
+              style={{
+                fontSize: 'clamp(0.9rem, 2vw, 1.1rem)',
+                color: 'rgba(240, 236, 228, 0.65)',
+                letterSpacing: '0.04em',
+                fontFamily: 'Heebo, sans-serif',
+              }}
+            >
+              רהיטים ייחודיים, מעוצבים ומיוצרים בישראל
+            </p>
+            <button
+              className="hero-cta px-10 py-3.5 text-base font-semibold tracking-wider"
+              style={{ fontFamily: 'Heebo, sans-serif', letterSpacing: '0.06em' }}
+              onClick={() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              גלה את הקולקציה
+            </button>
+
+            {/* Scroll indicator */}
+            <div className="flex flex-col items-center mt-14 gap-2 opacity-40">
+              <span style={{ fontSize: '0.7rem', letterSpacing: '0.2em', color: '#c9a84c', fontWeight: 300 }}>
+                גלול למטה
+              </span>
+              <div style={{
+                width: 1,
+                height: 40,
+                background: 'linear-gradient(to bottom, #c9a84c, transparent)',
+                animation: 'pulse 2s ease-in-out infinite'
+              }} />
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── Product Gallery ─────────────────────────────────────────────────────
+    const products = [
+      { id: 1, name: 'ספת סלון פרימיום', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/658261947_122160035246817739_8264953829864846765_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=7b2446&_nc_ohc=_1e5-nav1VgQ7kNvwF1AyJq&_nc_oc=AdqW5SEivXGU-tT-agBWVDMHGK96mJrjgPHJ4xVxZqEBmCwOYa1sqEzdeTyw3G0gCss&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=sXGAT334Jk-JI1mF1zEj4w&_nc_ss=7a32e&oh=00_AfxhSUmCLjGuVhb_YqLsFK_bO1ccje_LwANIM1dsmtCtNQ&oe=69CEFDDD' },
+      { id: 2, name: 'כורסת אוקספורד', url: 'https://scontent.ftlv6-1.fna.fbcdn.net/v/t39.30808-6/657490267_122160035186817739_4014073584733119084_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=7b2446&_nc_ohc=-PQLJuaPdnUQ7kNvwGlE3qS&_nc_oc=AdrprHvsgohbCInNWD8x7jZ_xIwvvAB_00x2UMEHqIyfnQ1W4IZFT4Jln95A-iWJzDM&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=g4IGKJGAFJUNgps31lkW7w&_nc_ss=7a32e&oh=00_AfwB7v-RrxJqPpp8rxY9PFfqnMPAAr_4HI4AkhlPhN6_Dw&oe=69CED1D2' },
+      { id: 3, name: 'שולחן אוכל מעץ מלא', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/657714334_122160035144817739_3128133248223538344_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=7b2446&_nc_ohc=n79apN0KnHsQ7kNvwH-lSRZ&_nc_oc=AdpjmV1rGhEvl6_w2s87JJcWEySxfYrQzc6SSqiTgj8eM-4FH7VrOJle2Tx19sIv2cU&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=Zs6w6ACxKS34VYFG6UY84w&_nc_ss=7a32e&oh=00_AfzD-aAzPeptlVaSBUEOsenGRI0kKV1hai_CgbW0VP2Ypg&oe=69CEE34E' },
+      { id: 4, name: 'מיטה זוגית דגם קלאסיק', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/659081859_122160035102817739_4598869909126125251_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=7b2446&_nc_ohc=AnUVvp95O9YQ7kNvwFKSk-r&_nc_oc=AdovKeWWlltqUPsZkj50kYyVsRVXFhJKU_Ak51SkPmQU22Zh6QsgzeraSZ_XjMzLTCk&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=uHtwq-4J0EY5xs4hgLnprw&_nc_ss=7a32e&oh=00_AfwNgz8DtmESMGO8ddn6S5KCHJ6iHVtApiR-MfoY7JqFlg&oe=69CF01FE' },
+      { id: 5, name: 'מדף קיר מעוצב', url: 'https://scontent.ftlv6-1.fna.fbcdn.net/v/t39.30808-6/657380617_122159964818817739_2937471651739939409_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=7b2446&_nc_ohc=mjo9kcy3qXoQ7kNvwHUpFU3&_nc_oc=AdrdGbYiRvmT3ZzPaC3tCqtfrS7XmLJhWGrP68yyn9jTc4TV0KGZofdvJzh-X-R57X4&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=OQRS3GqcobV3TSIBtHu0mg&_nc_ss=7a32e&oh=00_AfzPBRXmWCrBQ-feUY7VYIy77UHwuKNtuVncaiSFW8AgCg&oe=69CEF2D9' },
+      { id: 6, name: 'ארון הלבשה פרימיום', url: 'https://scontent.ftlv6-1.fna.fbcdn.net/v/t39.30808-6/656749737_122159964860817739_2572033093733630936_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=7b2446&_nc_ohc=CbmoJbbrAYEQ7kNvwHKp05o&_nc_oc=AdpjHxK3IxBYv2kiF4qSGCropBtkc7c9kCj9lI67P5dCEga8CaDK15_0I0Wm4-gef4E&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=Kj9jXuedVyo8oV6oocrGSg&_nc_ss=7a32e&oh=00_Afxvp6c1IKeSSBqjGvbUHfPlcLk2Bk1rNw44VI9gOTGb6A&oe=69CED4C5' },
+      { id: 7, name: 'כיסא אוכל מרופד', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/657588450_122159973710817739_7456793006720965212_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=7b2446&_nc_ohc=qpAowZPfgQwQ7kNvwEuXzFp&_nc_oc=Ado-wEZ5eGZc4Fs3Ua-b5NEyBfPbpkbNjP-A0XhYr0wJBo6sIUuKjr8HYlqFz7d-IHA&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=JzkZpzMjCNG6OiqAoQbagg&_nc_ss=7a32e&oh=00_Afx7_A7aX623n-SnBldhNUv8BpHB1fYW_Dy85AY6dYadpg&oe=69CEFD98' },
+      { id: 8, name: 'שולחן קפה מעוצב', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/657930266_122159973752817739_4092518375143041974_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=7b2446&_nc_ohc=pPWdJfTgBb8Q7kNvwF4EHeI&_nc_oc=Adqk_rxnj-ZkeCDuK0rH8GHf-KkgoG7xmLAUgxx6au3IzAEKDzHNU8dZ4ye72dmEbQg&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=hTRe8cWKMxQiGZkhnq9aMQ&_nc_ss=7a32e&oh=00_AfzaPEm-w5ZvkgsUwMLerxPeOHdzmu-giOW7ygR6D5RVQQ&oe=69CEEAF6' },
+      { id: 9, name: 'מזנון סלון', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/655292926_122159973794817739_3137657286833041244_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=7b2446&_nc_ohc=q7-d3fEMsgkQ7kNvwGN_PAv&_nc_oc=Adr5ejVHdSixFBaSx9MqR11TVNWQwLhpPmW9BIJ75kXH7PIXgRzjv37iMKvfB32hzwE&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=r8txUezYn9lE0egEskhm_A&_nc_ss=7a32e&oh=00_Afx5IQHbPb0aZyjW-S2dfsj4j75rcZy9OdGiHrDU3J4q_A&oe=69CEE97D' },
+      { id: 10, name: 'ספסל כניסה', url: 'https://scontent.ftlv6-1.fna.fbcdn.net/v/t39.30808-6/657393839_122159973836817739_1281652252039337851_n.jpg?_nc_cat=110&ccb=1-7&_nc_sid=7b2446&_nc_ohc=qCdNiJMdSK8Q7kNvwEOsVu4&_nc_oc=AdoRalxq2h4ijHRskc54IZ-LfiZvzCRFilYxax2dzEc-H7kh4zwMOu8aQqt_1Kt-40E&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=OiRDEnKFwP1MSVtA1kwjQQ&_nc_ss=7a32e&oh=00_Afyv_majxDSk8cXuspVl_MWBruVQAhiGQcBqawzSEQX9Lw&oe=69CEFF4C' },
+      { id: 11, name: 'ארגז אחסון', url: 'https://scontent.ftlv5-1.fna.fbcdn.net/v/t39.30808-6/655964380_122159973878817739_8231000763040985697_n.jpg?_nc_cat=108&ccb=1-7&_nc_sid=7b2446&_nc_ohc=F6M25JPts58Q7kNvwGYA3vr&_nc_oc=AdpUTluqQOvB4bBXcBE2YB-qb4gKWzHm5PcfzBKWsh4wKWxuj52kmmtmPshRl1F5v3M&_nc_zt=23&_nc_ht=scontent.ftlv5-1.fna&_nc_gid=eu3HX7dZzpKGRFndvuo61A&_nc_ss=7a32e&oh=00_AfzLJzRcUE_435wMa9_Sx_1NcfgxN4-ysdOFSggp9R6aQ&oe=69CEDDC7' },
+      { id: 12, name: 'מנורת רצפה', url: 'https://scontent.ftlv6-1.fna.fbcdn.net/v/t39.30808-6/656748451_122159973926817739_4918994933521489807_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=7b2446&_nc_ohc=50kVzgn12AoQ7kNvwE0Zddd&_nc_oc=AdrEi5UMdpq4GN36Tyn-hSRBTFgb2u3gSR-IkLA0pHe51Ap_0bgB1Wyeqi_0U11-E60&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=7sjdS12RvE5NBuKEO6_V5w&_nc_ss=7a32e&oh=00_AfzRTs5-YwCAc2EywVnd8Dmexo3Oqhe4G1FG9XUcEXG5qg&oe=69CEEAF7' },
+      { id: 13, name: 'שולחן עבודה', url: 'https://scontent.ftlv6-1.fna.fbcdn.net/v/t39.30808-6/482263297_122097287138817739_3741472045442402000_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=7b2446&_nc_ohc=orfxzFdrbXYQ7kNvwFe_Z8n&_nc_oc=Adry7vGJWzCcOMKSYz8KKa8XFRpWB5KrGbvpGQnAs5I25DJP8FAbqfbAjs-szLbN5XQ&_nc_zt=23&_nc_ht=scontent.ftlv6-1.fna&_nc_gid=12A_njxE0RJ_TOGTDeBpCQ&_nc_ss=7a32e&oh=00_Afw3pUIsBAQ0Gf2JVchi0V5AxfsyYNE7_Tn9hd788BVf9A&oe=69CEEA04' },
+    ];
+
+    function GallerySection() {
+      return (
+        <section
+          id="gallery"
+          className="py-24 px-4 md:px-8 lg:px-16"
+          style={{ background: '#0a0a0a', position: 'relative', zIndex: 1 }}
+        >
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-16 fade-in">
+              <span style={{ color: '#c9a84c', fontSize: '0.75rem', letterSpacing: '0.3em', fontWeight: 300 }}>
+                הקולקציה שלנו
+              </span>
+              <h2
+                className="font-black mt-3 mb-4"
+                style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', color: '#f0ece4', letterSpacing: '0.04em' }}
+              >
+                ריהוט שמדבר בעד עצמו
+              </h2>
+              <hr className="gold-rule" style={{ maxWidth: '120px', margin: '0 auto' }} />
+            </div>
+
+            {/* Masonry grid */}
+            <div className="gallery-masonry fade-in">
+              {products.map((product) => (
+                <div key={product.id} className="product-card">
+                  <img
+                    src={product.url}
+                    alt={product.name}
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.style.minHeight = '200px';
+                      e.target.style.background = '#1a1a1a';
+                    }}
+                  />
+                  <div className="overlay">
+                    <span className="product-name">{product.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── Brand Story ─────────────────────────────────────────────────────────
+    function BrandStory() {
+      return (
+        <section
+          id="story"
+          className="py-24"
+          style={{ background: '#0d0d0d', position: 'relative', zIndex: 1 }}
+        >
+          <div className="max-w-7xl mx-auto px-4 md:px-8 lg:px-16">
+            <div className="flex flex-col md:flex-row items-stretch gap-0 md:gap-0">
+
+              {/* Text column (right in RTL) */}
+              <div
+                className="flex-1 flex flex-col justify-center py-12 md:py-16 px-6 md:px-12 fade-in"
+                style={{ order: 1 }}
+              >
+                <span style={{ color: '#c9a84c', fontSize: '0.75rem', letterSpacing: '0.3em', fontWeight: 300 }}>
+                  הסיפור שלנו
+                </span>
+                <h2
+                  className="font-black mt-4 leading-tight"
+                  style={{ fontSize: 'clamp(1.6rem, 4vw, 2.8rem)', color: '#f0ece4' }}
+                >
+                  מלאכת יד.
+                  <br />
+                  <span style={{ color: '#c9a84c' }}>חומרים מובחרים.</span>
+                  <br />
+                  עיצוב ישראלי.
+                </h2>
+                <hr className="gold-rule" />
+                <p
+                  className="font-light leading-relaxed mb-6"
+                  style={{ fontSize: '1.05rem', color: 'rgba(240,236,228,0.8)', lineHeight: '2' }}
+                >
+                  כל פריט מרהיטינו נוצר בידי אומנים מיומנים עם עשרות שנות ניסיון. אנו משתמשים אך ורק בעצים מובחרים מיובאים, ומציעים עיצוב מותאם אישית לכל לקוח. זהו לא ריהוט — זוהי יצירת אמנות לבית שלכם.
+                </p>
+                <div
+                  className="flex items-center gap-4 pt-2"
+                  style={{ borderTop: '1px solid rgba(201,168,76,0.15)' }}
+                >
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" strokeWidth="1.5">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{ color: '#c9a84c', fontSize: '0.9rem', fontWeight: 700 }}>רחל כהן</div>
+                    <div style={{ color: 'rgba(240,236,228,0.5)', fontSize: '0.8rem', fontWeight: 300 }}>
+                      מייסדת הבית — מעצבת פנים עם ניסיון של 25 שנה
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Image column (left in RTL) */}
+              <div
+                className="flex-1 relative story-image-container fade-in fade-in-delay-2"
+                style={{ minHeight: '400px', order: 2 }}
+              >
+                <img
+                  src={products[12].url}
+                  alt="שולחן עבודה"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+                {/* Gold accent corner */}
+                <div style={{
+                  position: 'absolute',
+                  top: '2rem',
+                  left: '2rem',
+                  width: '60px',
+                  height: '60px',
+                  borderLeft: '2px solid #c9a84c',
+                  borderBottom: '2px solid #c9a84c',
+                  zIndex: 3,
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  bottom: '2rem',
+                  right: '2rem',
+                  width: '60px',
+                  height: '60px',
+                  borderRight: '2px solid #c9a84c',
+                  borderTop: '2px solid #c9a84c',
+                  zIndex: 3,
+                }} />
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div
+              className="grid grid-cols-2 md:grid-cols-4 gap-px mt-0 fade-in"
+              style={{ borderTop: '1px solid rgba(201,168,76,0.12)' }}
+            >
+              {[
+                { num: '25+', label: 'שנות ניסיון' },
+                { num: '1,200+', label: 'לקוחות מרוצים' },
+                { num: '100%', label: 'עץ מלא אמיתי' },
+                { num: '4-8', label: 'שבועות ייצור' },
+              ].map(({ num, label }) => (
+                <div
+                  key={label}
+                  className="text-center py-8 px-4"
+                  style={{ borderLeft: '1px solid rgba(201,168,76,0.08)' }}
+                >
+                  <div
+                    className="font-black"
+                    style={{ fontSize: '2.2rem', color: '#c9a84c', lineHeight: 1 }}
+                  >
+                    {num}
+                  </div>
+                  <div style={{ color: 'rgba(240,236,228,0.5)', fontSize: '0.8rem', marginTop: '0.5rem', fontWeight: 300 }}>
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── Process Timeline ─────────────────────────────────────────────────────
+    const steps = [
+      {
+        num: '1',
+        title: 'ייעוץ עיצובי',
+        desc: 'פגישת ייעוץ חינמית עם המעצב שלנו',
+        icon: (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        ),
+      },
+      {
+        num: '2',
+        title: 'ייצור על פי הזמנה',
+        desc: 'ייצור ידני בסדנה הישראלית שלנו, 4-8 שבועות',
+        icon: (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+          </svg>
+        ),
+      },
+      {
+        num: '3',
+        title: 'משלוח ומסירה',
+        desc: 'משלוח עד הבית ומסירה לבית הלקוח',
+        icon: (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="1" y="3" width="15" height="13"/>
+            <path d="M16 8h4l3 3v5h-7V8z"/>
+            <circle cx="5.5" cy="18.5" r="2.5"/>
+            <circle cx="18.5" cy="18.5" r="2.5"/>
+          </svg>
+        ),
+      },
+    ];
+
+    function ProcessTimeline() {
+      return (
+        <section
+          id="process"
+          className="py-24"
+          style={{ background: '#111111', position: 'relative', zIndex: 1 }}
+        >
+          <div className="max-w-6xl mx-auto px-4 md:px-8 lg:px-16">
+            {/* Header */}
+            <div className="text-center mb-16 fade-in">
+              <span style={{ color: '#c9a84c', fontSize: '0.75rem', letterSpacing: '0.3em', fontWeight: 300 }}>
+                כיצד אנחנו עובדים
+              </span>
+              <h2
+                className="font-black mt-3"
+                style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', color: '#f0ece4' }}
+              >
+                התהליך שלנו
+              </h2>
+            </div>
+
+            {/* Steps */}
+            <div className="flex flex-col md:flex-row items-start justify-between gap-0 fade-in">
+              {steps.map((step, index) => (
+                <React.Fragment key={step.num}>
+                  {/* Step */}
+                  <div
+                    className="flex flex-col items-center text-center flex-1 px-6 pb-8 md:pb-0"
+                    style={{ maxWidth: '280px', margin: '0 auto' }}
+                  >
+                    {/* Circle number */}
+                    <div
+                      className="relative flex items-center justify-center mb-6"
+                      style={{
+                        width: '72px',
+                        height: '72px',
+                        borderRadius: '50%',
+                        border: '2px solid #c9a84c',
+                        background: 'rgba(201,168,76,0.08)',
+                        color: '#c9a84c',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {step.icon}
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          right: '-8px',
+                          width: '22px',
+                          height: '22px',
+                          borderRadius: '50%',
+                          background: '#c9a84c',
+                          color: '#0a0a0a',
+                          fontSize: '0.7rem',
+                          fontWeight: 900,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {step.num}
+                      </span>
+                    </div>
+                    <h3
+                      className="font-bold mb-3"
+                      style={{ fontSize: '1.1rem', color: '#f0ece4', letterSpacing: '0.03em' }}
+                    >
+                      {step.title}
+                    </h3>
+                    <p style={{ color: 'rgba(240,236,228,0.55)', fontSize: '0.9rem', lineHeight: '1.8', fontWeight: 300 }}>
+                      {step.desc}
+                    </p>
+                  </div>
+
+                  {/* Connector (except after last) */}
+                  {index < steps.length - 1 && (
+                    <div className="timeline-connector hidden md:block" />
+                  )}
+                  {index < steps.length - 1 && (
+                    <div
+                      className="md:hidden mx-auto my-2"
+                      style={{
+                        width: '2px',
+                        height: '40px',
+                        background: 'repeating-linear-gradient(to bottom, #c9a84c 0px, #c9a84c 6px, transparent 6px, transparent 12px)',
+                      }}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── Contact / CTA ────────────────────────────────────────────────────────
+    function ContactSection() {
+      const [form, setForm] = useState({ name: '', phone: '', message: '' });
+      const [submitted, setSubmitted] = useState(false);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 4000);
+        setForm({ name: '', phone: '', message: '' });
+      };
+
+      return (
+        <section
+          id="contact"
+          className="cta-section py-24"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
+          <div className="max-w-4xl mx-auto px-4 md:px-8 text-center">
+            {/* Headline */}
+            <div className="fade-in mb-12">
+              <span style={{ color: '#c9a84c', fontSize: '0.75rem', letterSpacing: '0.3em', fontWeight: 300 }}>
+                צרו קשר
+              </span>
+              <h2
+                className="font-black mt-4 leading-tight"
+                style={{ fontSize: 'clamp(1.8rem, 5vw, 3.2rem)', color: '#c9a84c', letterSpacing: '0.02em' }}
+              >
+                מוכנים ליצור את הריהוט
+                <br />
+                שחלמתם עליו?
+              </h2>
+              <p
+                className="mt-4 font-light"
+                style={{ fontSize: '1.1rem', color: 'rgba(240,236,228,0.65)' }}
+              >
+                צרו קשר היום ותקבלו ייעוץ עיצובי חינם
+              </p>
+
+              {/* WhatsApp */}
+              <div className="mt-8 mb-12">
+                <a
+                  href="https://wa.me/972500000000"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whatsapp-btn inline-flex items-center gap-3 px-8 py-4 font-semibold text-base"
+                  style={{ textDecoration: 'none', fontFamily: 'Heebo, sans-serif', letterSpacing: '0.04em', borderRadius: '2px' }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.126.554 4.12 1.523 5.851L.057 23.857l6.184-1.458A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.893 0-3.665-.523-5.178-1.432l-.371-.22-3.672.865.932-3.566-.241-.386A9.943 9.943 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                  </svg>
+                  שלח הודעה ב-WhatsApp
+                </a>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-4 mb-10 fade-in">
+              <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(201,168,76,0.2)' }} />
+              <span style={{ color: 'rgba(201,168,76,0.5)', fontSize: '0.75rem', letterSpacing: '0.15em' }}>
+                או השאר פרטים
+              </span>
+              <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(201,168,76,0.2)' }} />
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="fade-in fade-in-delay-1">
+              {submitted && (
+                <div
+                  className="mb-6 py-4 px-6 text-center font-semibold"
+                  style={{
+                    background: 'rgba(201,168,76,0.12)',
+                    border: '1px solid rgba(201,168,76,0.4)',
+                    color: '#c9a84c',
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  תודה! הפנייה התקבלה. ניצור איתך קשר בהקדם.
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="שם מלא"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  required
+                  style={{ direction: 'rtl' }}
+                />
+                <input
+                  type="tel"
+                  className="form-input"
+                  placeholder="מספר טלפון"
+                  value={form.phone}
+                  onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                  required
+                  style={{ direction: 'rtl' }}
+                />
+              </div>
+              <textarea
+                className="form-input mb-6"
+                placeholder="הודעה — ספרו לנו על הריהוט שחלמתם עליו"
+                rows="5"
+                value={form.message}
+                onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                style={{ direction: 'rtl', resize: 'vertical' }}
+              />
+              <button
+                type="submit"
+                className="gold-btn px-12 py-4 font-bold text-base tracking-wider w-full md:w-auto"
+                style={{ fontFamily: 'Heebo, sans-serif', letterSpacing: '0.06em', borderRadius: '2px' }}
+              >
+                שלח פנייה
+              </button>
+            </form>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── Footer ───────────────────────────────────────────────────────────────
+    function Footer() {
+      return (
+        <footer style={{ background: '#060606', borderTop: '1px solid rgba(201,168,76,0.1)', zIndex: 1, position: 'relative' }}>
+          <div className="max-w-7xl mx-auto px-4 md:px-8 py-12 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <div
+                className="font-black text-xl mb-1"
+                style={{ color: '#c9a84c', letterSpacing: '0.12em' }}
+              >
+                ארט-ווד
+              </div>
+              <div style={{ color: 'rgba(240,236,228,0.35)', fontSize: '0.78rem', fontWeight: 300 }}>
+                ריהוט יוקרה ישראלי מאז 1999
+              </div>
+            </div>
+            <div className="flex gap-8">
+              {['קולקציה', 'הסיפור', 'תהליך', 'צור קשר'].map(link => (
+                <span
+                  key={link}
+                  className="nav-link cursor-pointer"
+                  style={{ fontSize: '0.82rem' }}
+                >
+                  {link}
+                </span>
+              ))}
+            </div>
+            <div style={{ color: 'rgba(240,236,228,0.25)', fontSize: '0.75rem', fontWeight: 300 }}>
+              © 2024 ארט-ווד. כל הזכויות שמורות.
+            </div>
+          </div>
+        </footer>
+      );
+    }
+
+    // ─── Intersection Observer Hook ──────────────────────────────────────────
+    function useScrollReveal() {
+      useEffect(() => {
+        const els = document.querySelectorAll('.fade-in');
+        const observer = new IntersectionObserver(
+          (entries) => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+          { threshold: 0.08, rootMargin: '0px 0px -20px 0px' }
+        );
+        els.forEach(el => observer.observe(el));
+        // Immediately reveal elements already in viewport (Babel async timing gap)
+        requestAnimationFrame(() => {
+          els.forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('visible');
+          });
+        });
+        return () => observer.disconnect();
+      }, []);
+    }
+
+    // ─── App ──────────────────────────────────────────────────────────────────
+    function App() {
+      useScrollReveal();
+
+      return (
+        <>
+          <GoldOrbs />
+          <Nav />
+          <main>
+            <Hero />
+            <GallerySection />
+            <BrandStory />
+            <ProcessTimeline />
+            <ContactSection />
+          </main>
+          <Footer />
+        </>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
